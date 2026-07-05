@@ -34,7 +34,7 @@ function SortHeader({
       variant="ghost"
       size="sm"
       className={cn(
-        "h-7 w-full px-0 text-xs font-medium text-muted-foreground shadow-none hover:translate-y-0 hover:text-foreground sm:h-8 sm:text-sm",
+        "h-7 w-full px-0 text-xs font-medium text-muted-foreground shadow-none hover:translate-y-0 hover:bg-transparent hover:text-foreground sm:h-8 sm:text-sm",
         align === "end" && "justify-end",
         align === "center" && "justify-center",
         align === "start" && "justify-start",
