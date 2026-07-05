@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
-import { TopBar } from "./TopBar"
 import { BottomTabBar } from "./BottomTabBar"
 import { SideNav } from "./SideNav"
 
@@ -22,7 +21,6 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background/80">
-      <TopBar />
       <main className="animate-page-in flex-1 overflow-auto px-4 py-4 pb-24">
         <Outlet />
       </main>

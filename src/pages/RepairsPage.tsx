@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { CircleDollarSign, Plus, Search, TrendingUp, Wrench, Workflow } from "lucide-react"
+import { ChevronDown, CircleDollarSign, Plus, Search, TrendingUp, Wrench, Workflow } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -112,6 +112,7 @@ export function RepairsPage() {
   const navigate = useNavigate()
   const { repairs, loading, error } = useRepairsData()
   const [search, setSearch] = useState("")
+  const [showMetrics, setShowMetrics] = useState(false)
   const [filter, setFilter] = useState<RepairFilter>("all")
 
   const columns = useMemo(() => repairColumns(), [])
@@ -142,36 +143,49 @@ export function RepairsPage() {
         </div>
       </div>
 
-      {loading ? (
-        <MetricsSkeleton />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <RepairMetricTile
-            label="Total Revenue"
-            value={formatPKR(currentMonthSummary.totalFees)}
-            hint={`${currentMonthSummary.totalJobs} jobs this month`}
-            icon={CircleDollarSign}
-          />
-          <RepairMetricTile
-            label="Gross Repair Jobs Revenue"
-            value={formatPKR(currentMonthSummary.repairRevenue)}
-            hint={`${currentMonthSummary.repairJobs} repair jobs`}
-            icon={Wrench}
-          />
-          <RepairMetricTile
-            label="Labor Jobs Revenue"
-            value={formatPKR(currentMonthSummary.laborRevenue)}
-            hint={`${currentMonthSummary.laborJobs} labor jobs`}
-            icon={Workflow}
-          />
-          <RepairMetricTile
-            label="Net Profit"
-            value={formatPKR(currentMonthSummary.netProfit)}
-            hint="Repair + labor profit after item cost"
-            icon={TrendingUp}
-          />
-        </div>
-      )}
+      <Button
+        type="button"
+        variant="outline"
+        className="flex w-full justify-between sm:hidden"
+        onClick={() => setShowMetrics((current) => !current)}
+        aria-expanded={showMetrics}
+      >
+        Summary
+        <ChevronDown className={cn("size-4 transition-transform", showMetrics && "rotate-180")} />
+      </Button>
+
+      <div className={cn(!showMetrics && "hidden sm:block")}>
+        {loading ? (
+          <MetricsSkeleton />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <RepairMetricTile
+              label="Total Revenue"
+              value={formatPKR(currentMonthSummary.totalFees)}
+              hint={`${currentMonthSummary.totalJobs} jobs this month`}
+              icon={CircleDollarSign}
+            />
+            <RepairMetricTile
+              label="Gross Repair Jobs Revenue"
+              value={formatPKR(currentMonthSummary.repairRevenue)}
+              hint={`${currentMonthSummary.repairJobs} repair jobs`}
+              icon={Wrench}
+            />
+            <RepairMetricTile
+              label="Labor Jobs Revenue"
+              value={formatPKR(currentMonthSummary.laborRevenue)}
+              hint={`${currentMonthSummary.laborJobs} labor jobs`}
+              icon={Workflow}
+            />
+            <RepairMetricTile
+              label="Net Profit"
+              value={formatPKR(currentMonthSummary.netProfit)}
+              hint="Repair + labor profit after item cost"
+              icon={TrendingUp}
+            />
+          </div>
+        )}
+      </div>
 
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">

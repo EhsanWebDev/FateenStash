@@ -2,7 +2,6 @@ import { NavLink } from "react-router-dom"
 import { Home, Package, Wrench, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
-import { InstallButton } from "./InstallButton"
 
 const links = [
   { to: "/", icon: Home, label: "Home" },
@@ -43,10 +42,6 @@ export function SideNav() {
           </NavLink>
         ))}
       </nav>
-
-      <div className="p-2">
-        <InstallButton className="w-full" />
-      </div>
     </aside>
   )
 }

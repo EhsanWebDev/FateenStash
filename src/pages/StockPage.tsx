@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { AlertTriangle, Search, WalletCards } from "lucide-react"
+import { AlertTriangle, ChevronDown, Search, WalletCards } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -65,12 +65,24 @@ function StockMetricTile({
         <p className="text-[11px] text-muted-foreground sm:text-xs">{hint}</p>
         <span className="flex gap-1.5">
           {onClick ? (
-            <Button type="button" size="sm" variant="ghost" onClick={onClick}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 shadow-none hover:translate-y-0"
+              onClick={onClick}
+            >
               {active ? "Show all" : "Filter"}
             </Button>
           ) : null}
           {onAction ? (
-            <Button type="button" size="sm" variant="outline" onClick={onAction}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 shadow-none hover:translate-y-0"
+              onClick={onAction}
+            >
               {actionLabel}
             </Button>
           ) : null}
@@ -124,6 +136,7 @@ export function StockPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState("")
+  const [showMetrics, setShowMetrics] = useState(false)
   const [activeCategory, setActiveCategory] = useState<Category | "all">("all")
   const { items, loading, error, refresh } = useStockData()
   const [lowStockThreshold] = useState(getLowStockThreshold)
@@ -173,28 +186,41 @@ export function StockPage() {
         </div>
       )}
 
-      {loading ? (
-        <MetricsSkeleton />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <StockMetricTile
-            label="Stock Value"
-            value={formatPKR(stockSummary.totalValue)}
-            hint={`${items.length} active items - ${stockSummary.totalUnits} units`}
-            icon={WalletCards}
-          />
-          <StockMetricTile
-            label="Low Stock"
-            value={String(stockSummary.lowStockCount)}
-            hint={`At or below ${lowStockThreshold} units`}
-            icon={AlertTriangle}
-            active={lowFilter}
-            onClick={() => setLowFilter((current) => !current)}
-            actionLabel="Zero stock"
-            onAction={() => navigate("/stock/out-of-stock")}
-          />
-        </div>
-      )}
+      <Button
+        type="button"
+        variant="outline"
+        className="flex w-full justify-between sm:hidden"
+        onClick={() => setShowMetrics((current) => !current)}
+        aria-expanded={showMetrics}
+      >
+        Summary
+        <ChevronDown className={cn("size-4 transition-transform", showMetrics && "rotate-180")} />
+      </Button>
+
+      <div className={cn(!showMetrics && "hidden sm:block")}>
+        {loading ? (
+          <MetricsSkeleton />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <StockMetricTile
+              label="Stock Value"
+              value={formatPKR(stockSummary.totalValue)}
+              hint={`${items.length} active items - ${stockSummary.totalUnits} units`}
+              icon={WalletCards}
+            />
+            <StockMetricTile
+              label="Low Stock"
+              value={String(stockSummary.lowStockCount)}
+              hint={`At or below ${lowStockThreshold} units`}
+              icon={AlertTriangle}
+              active={lowFilter}
+              onClick={() => setLowFilter((current) => !current)}
+              actionLabel="Zero stock"
+              onAction={() => navigate("/stock/out-of-stock")}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Search */}
       <div className="relative">

@@ -34,7 +34,7 @@ function SortHeader({
       variant="ghost"
       size="sm"
       className={cn(
-        "h-7 w-full px-0 text-xs font-medium text-muted-foreground hover:text-foreground sm:h-8 sm:text-sm",
+        "h-7 w-full px-0 text-xs font-medium text-muted-foreground shadow-none hover:translate-y-0 hover:text-foreground sm:h-8 sm:text-sm",
         align === "end" && "justify-end",
         align === "center" && "justify-center",
         align === "start" && "justify-start",
@@ -52,11 +52,19 @@ export function stockColumns(lowStockThreshold: number): ColumnDef<InventoryRow>
   {
     accessorKey: "name",
     header: ({ column }) => <SortHeader label="Name" column={column} />,
-    cell: ({ row }) => (
-      <span className="block min-w-0 max-w-full truncate text-xs font-medium sm:text-sm">
-        {row.getValue("name")}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const name = String(row.getValue("name"));
+      const shortName = name.length > 30 ? `${name.slice(0, 27)}...` : name;
+
+      return (
+        <span
+          className="block min-w-0 max-w-full truncate text-[11px] font-medium sm:text-sm"
+          title={name}
+        >
+          {shortName}
+        </span>
+      );
+    },
     filterFn: "includesString",
   },
   {

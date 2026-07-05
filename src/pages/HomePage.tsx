@@ -52,8 +52,8 @@ function SoldCategoriesChart({ repairs, inventory }: { repairs: RepairListItem[]
         <p className="text-3xl font-bold tabular-nums">{total} items</p>
       </CardHeader>
       <CardContent className="grid gap-5 md:grid-cols-[16rem_minmax(0,1fr)] md:items-center">
-        <div className="relative mx-auto grid size-56 place-items-center rounded-full" style={{ background: `conic-gradient(${chart})` }}>
-          <div className="grid size-28 place-items-center rounded-full bg-card text-center shadow-inner">
+        <div className="relative mx-auto grid size-40 place-items-center rounded-full sm:size-56" style={{ background: `conic-gradient(${chart})` }}>
+          <div className="grid size-20 place-items-center rounded-full bg-card text-center shadow-inner sm:size-28">
             <div>
               <p className="text-2xl font-bold tabular-nums">{soldCategories.length}</p>
               <p className="text-xs text-muted-foreground">types</p>
@@ -126,9 +126,9 @@ function JobMixChart({
   repairRevenue: number
   laborRevenue: number
 }) {
-  const totalJobs = Math.max(repairJobs + laborJobs, 1)
-  const repairPct = (repairJobs / totalJobs) * 100
-  const laborPct = 100 - repairPct
+  const totalJobs = repairJobs + laborJobs
+  const repairPct = totalJobs ? (repairJobs / totalJobs) * 100 : 0
+  const laborPct = totalJobs ? 100 - repairPct : 0
 
   return (
     <Card>
@@ -136,21 +136,23 @@ function JobMixChart({
         <CardTitle className="text-base">Job Mix</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <div className="relative mx-auto grid size-40 place-items-center">
-          <svg viewBox="0 0 120 120" className="size-40 -rotate-90" role="img" aria-label="Repair and labor job mix">
+        <div className="relative mx-auto grid size-32 place-items-center sm:size-40">
+          <svg viewBox="0 0 120 120" className="size-32 -rotate-90 sm:size-40" role="img" aria-label="Repair and labor job mix">
             <circle cx="60" cy="60" r="46" fill="none" stroke="currentColor" className="text-muted" strokeWidth="16" />
-            <circle
-              cx="60"
-              cy="60"
-              r="46"
-              fill="none"
-              stroke="currentColor"
-              className="text-primary"
-              strokeLinecap="round"
-              strokeWidth="16"
-              pathLength="100"
-              strokeDasharray={`${repairPct} ${laborPct}`}
-            />
+            {totalJobs > 0 && (
+              <circle
+                cx="60"
+                cy="60"
+                r="46"
+                fill="none"
+                stroke="currentColor"
+                className="text-primary"
+                strokeLinecap="round"
+                strokeWidth="16"
+                pathLength="100"
+                strokeDasharray={`${repairPct} ${laborPct}`}
+              />
+            )}
           </svg>
           <div className="absolute text-center">
             <p className="text-2xl font-bold tabular-nums">{repairJobs + laborJobs}</p>
