@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/AppShell"
 import { HomePage } from "@/pages/HomePage"
 import { StockPage } from "@/pages/StockPage"
 import { StockDetailPage } from "@/pages/StockDetailPage"
+import { OutOfStockPage } from "@/pages/OutOfStockPage"
 import { RepairsPage } from "@/pages/RepairsPage"
 import { RepairDetailPage } from "@/pages/RepairDetailPage"
 import { SettingsPage } from "@/pages/SettingsPage"
@@ -15,6 +16,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />
           <Route path="stock" element={<StockPage />} />
+          <Route path="stock/out-of-stock" element={<OutOfStockPage />} />
           <Route path="stock/:id" element={<StockDetailPage />} />
           <Route path="repairs" element={<RepairsPage />} />
           <Route path="repairs/:id" element={<RepairDetailPage />} />

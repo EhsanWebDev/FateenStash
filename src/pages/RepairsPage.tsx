@@ -199,7 +199,7 @@ export function RepairsPage() {
             type="button"
             onClick={() => setFilter(option.value)}
             className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5",
+              "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
               filter === option.value
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "bg-secondary text-secondary-foreground hover:bg-secondary/80",

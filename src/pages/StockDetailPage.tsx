@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,18 +13,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
   deleteInventoryItem,
   fetchInventoryById,
   updateInventoryItem,
 } from "@/lib/queries"
+import { cn } from "@/lib/utils"
 import { CATEGORY_OPTIONS, type Category } from "@/types/database.types"
 
 const categories = CATEGORY_OPTIONS
@@ -44,10 +38,18 @@ export function StockDetailPage() {
   const itemId = useMemo(() => Number(id), [id])
 
   const [form, setForm] = useState<StockFormState | null>(null)
+  const [savedForm, setSavedForm] = useState<StockFormState | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const hasChanges =
+    !!form &&
+    !!savedForm &&
+    (form.name !== savedForm.name ||
+      form.category !== savedForm.category ||
+      form.qty_in_stock !== savedForm.qty_in_stock ||
+      form.price_per_unit !== savedForm.price_per_unit)
 
   useEffect(() => {
     if (!Number.isFinite(itemId)) {
@@ -65,12 +67,14 @@ export function StockDetailPage() {
       try {
         const item = await fetchInventoryById(itemId)
         if (!isMounted) return
-        setForm({
+        const nextForm = {
           name: item.name,
           category: item.category,
           qty_in_stock: String(item.qty_in_stock),
           price_per_unit: String(item.price_per_unit),
-        })
+        }
+        setForm(nextForm)
+        setSavedForm(nextForm)
       } catch (err) {
         if (!isMounted) return
         setError(err instanceof Error ? err.message : "Failed to load item")
@@ -87,7 +91,7 @@ export function StockDetailPage() {
   }, [itemId])
 
   async function handleUpdate() {
-    if (!form) return
+    if (!form || !hasChanges) return
 
     const trimmedName = form.name.trim()
     const qty = Number(form.qty_in_stock)
@@ -170,88 +174,99 @@ export function StockDetailPage() {
 
       {loading || !form ? (
         <div className="rounded-lg border p-4 text-muted-foreground">
-          Loading…
+          Loading...
         </div>
       ) : (
         <form
-          className="space-y-5 rounded-lg border p-4 sm:p-5"
+          className="rounded-xl border bg-card/40 p-4 shadow-sm ring-1 ring-foreground/5 sm:p-6"
           onSubmit={(event) => {
             event.preventDefault()
             handleUpdate()
           }}
         >
-          <FieldLabel htmlFor="item-name">Name</FieldLabel>
-          <Input
-            id="item-name"
-            name="name"
-            value={form.name}
-            autoComplete="off"
-            className="text-xs sm:text-sm"
-            onChange={(event) =>
-              setForm((prev) =>
-                prev ? { ...prev, name: event.target.value } : prev,
-              )
-            }
-          />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field id="item-name" label="Name" className="sm:col-span-2">
+              <Input
+                id="item-name"
+                name="name"
+                placeholder="Part name"
+                value={form.name}
+                autoComplete="off"
+                className="text-xs sm:text-sm"
+                onChange={(event) =>
+                  setForm((prev) =>
+                    prev ? { ...prev, name: event.target.value } : prev,
+                  )
+                }
+              />
+            </Field>
 
-          <FieldLabel htmlFor="item-category">Category</FieldLabel>
-          <Select
-            value={form.category}
-            onValueChange={(value) =>
-              setForm((prev) =>
-                prev ? { ...prev, category: value as Category } : prev,
-              )
-            }
-          >
-            <SelectTrigger id="item-category" name="category">
-              <SelectValue placeholder="Select category…" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.value} value={category.value}>
-                  {category.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Field id="item-category" label="Category" className="sm:col-span-2">
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => (
+                  <button
+                    key={category.value}
+                    type="button"
+                    disabled={saving || deleting}
+                    aria-pressed={form.category === category.value}
+                    onClick={() =>
+                      setForm((prev) =>
+                        prev ? { ...prev, category: category.value } : prev,
+                      )
+                    }
+                    className={cn(
+                      "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                      form.category === category.value
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                    )}
+                  >
+                    {category.label}
+                  </button>
+                ))}
+              </div>
+            </Field>
 
-          <FieldLabel htmlFor="item-qty">Quantity</FieldLabel>
-          <Input
-            id="item-qty"
-            name="qty_in_stock"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            value={form.qty_in_stock}
-            autoComplete="off"
-            className="text-xs sm:text-sm"
-            onChange={(event) =>
-              setForm((prev) =>
-                prev ? { ...prev, qty_in_stock: event.target.value } : prev,
-              )
-            }
-          />
+            <Field id="item-qty" label="Quantity">
+              <Input
+                id="item-qty"
+                name="qty_in_stock"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                value={form.qty_in_stock}
+                autoComplete="off"
+                className="text-xs sm:text-sm"
+                onChange={(event) =>
+                  setForm((prev) =>
+                    prev ? { ...prev, qty_in_stock: event.target.value } : prev,
+                  )
+                }
+              />
+            </Field>
 
-          <FieldLabel htmlFor="item-price">Price Per Unit</FieldLabel>
-          <Input
-            id="item-price"
-            name="price_per_unit"
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            value={form.price_per_unit}
-            autoComplete="off"
-            className="text-xs sm:text-sm tabular-nums"
-            onChange={(event) =>
-              setForm((prev) =>
-                prev ? { ...prev, price_per_unit: event.target.value } : prev,
-              )
-            }
-          />
+            <Field id="item-price" label="Price Per Unit">
+              <Input
+                id="item-price"
+                name="price_per_unit"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                value={form.price_per_unit}
+                autoComplete="off"
+                className="text-xs tabular-nums sm:text-sm"
+                onChange={(event) =>
+                  setForm((prev) =>
+                    prev ? { ...prev, price_per_unit: event.target.value } : prev,
+                  )
+                }
+              />
+            </Field>
+          </div>
 
-          <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
+          <div className="mt-8 flex flex-col gap-2 border-t pt-4 sm:flex-row sm:justify-end">
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
@@ -286,7 +301,7 @@ export function StockDetailPage() {
                     {deleting ? (
                       <Loader2 className="mr-1.5 size-4 animate-spin" />
                     ) : null}
-                    {deleting ? "Deleting…" : "Delete"}
+                    {deleting ? "Deleting..." : "Delete"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -295,10 +310,10 @@ export function StockDetailPage() {
             <Button
               type="submit"
               className="w-full sm:w-auto"
-              disabled={saving || deleting}
+              disabled={saving || deleting || !hasChanges}
             >
               {saving ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
-              {saving ? "Updating…" : "Update"}
+              {saving ? "Updating..." : "Update"}
             </Button>
           </div>
         </form>
@@ -307,16 +322,23 @@ export function StockDetailPage() {
   )
 }
 
-function FieldLabel({
-  htmlFor,
+function Field({
+  id,
+  label,
   children,
+  className,
 }: Readonly<{
-  htmlFor: string
+  id: string
+  label: string
   children: ReactNode
+  className?: string
 }>) {
   return (
-    <label htmlFor={htmlFor} className="block text-xs font-medium text-foreground/90 sm:text-sm">
+    <div className={cn("flex flex-col gap-2.5", className)}>
+      <label htmlFor={id} className="text-xs font-semibold text-foreground/85 sm:text-sm">
+        {label}
+      </label>
       {children}
-    </label>
+    </div>
   )
 }

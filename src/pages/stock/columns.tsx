@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { formatPKR, cn } from "@/lib/utils";
 import { CATEGORY_OPTIONS, type InventoryRow } from "@/types/database.types";
 
-const LOW_STOCK_THRESHOLD = 2;
 const categoryLabels = new Map(CATEGORY_OPTIONS.map((category) => [category.value, category.label]));
 
 function SortHeader({
@@ -48,7 +47,8 @@ function SortHeader({
   );
 }
 
-export const stockColumns: ColumnDef<InventoryRow>[] = [
+export function stockColumns(lowStockThreshold: number): ColumnDef<InventoryRow>[] {
+  return [
   {
     accessorKey: "name",
     header: ({ column }) => <SortHeader label="Name" column={column} />,
@@ -84,7 +84,7 @@ export const stockColumns: ColumnDef<InventoryRow>[] = [
         <div
           className={cn(
             "text-center text-xs tabular-nums sm:text-sm",
-            qty <= LOW_STOCK_THRESHOLD && "font-semibold text-yellow-600",
+            qty <= lowStockThreshold && "font-semibold text-yellow-600",
           )}
         >
           {qty}
@@ -105,4 +105,5 @@ export const stockColumns: ColumnDef<InventoryRow>[] = [
     ),
     enableColumnFilter: false,
   },
-];
+  ];
+}

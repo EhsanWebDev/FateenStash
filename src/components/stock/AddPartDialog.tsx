@@ -6,20 +6,12 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { createInventoryItem } from "@/lib/queries"
 import { cn } from "@/lib/utils"
 import { CATEGORY_OPTIONS, type Category } from "@/types/database.types"
@@ -89,17 +81,14 @@ export function AddPartDialog({ onCreated }: Readonly<AddPartDialogProps>) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={reset}>
+    <Dialog open={open} disablePointerDismissal onOpenChange={reset}>
       <DialogTrigger render={<Button size="sm" aria-label="Add part" />}>
         <Plus className="size-4" aria-hidden="true" />
         <span className="hidden sm:inline">Add Part</span>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader className="gap-1">
+      <DialogContent className="p-6 sm:max-w-xl">
+        <DialogHeader className="mb-2 gap-1">
           <DialogTitle>Add Part</DialogTitle>
-          <DialogDescription>
-            Add a stock item with its opening quantity and unit price.
-          </DialogDescription>
         </DialogHeader>
 
         {error && (
@@ -112,6 +101,7 @@ export function AddPartDialog({ onCreated }: Readonly<AddPartDialogProps>) {
           <Field id="part-name" label="Name" error={fieldErrors.name}>
             <Input
               id="part-name"
+              placeholder="Part name"
               value={form.name}
               disabled={submitting}
               autoComplete="off"
@@ -123,27 +113,30 @@ export function AddPartDialog({ onCreated }: Readonly<AddPartDialogProps>) {
           </Field>
 
           <Field id="part-category" label="Category">
-            <Select
-              value={form.category}
-              onValueChange={(value) =>
-                setForm((prev) => ({ ...prev, category: value as Category }))
-              }
-              disabled={submitting}
-            >
-              <SelectTrigger id="part-category">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORY_OPTIONS.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
-                    {category.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORY_OPTIONS.map((category) => (
+                <button
+                  key={category.value}
+                  type="button"
+                  disabled={submitting}
+                  aria-pressed={form.category === category.value}
+                  onClick={() =>
+                    setForm((prev) => ({ ...prev, category: category.value }))
+                  }
+                  className={cn(
+                    "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                    form.category === category.value
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                  )}
+                >
+                  {category.label}
+                </button>
+              ))}
+            </div>
           </Field>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[8rem_1fr]">
             <Field id="part-qty" label="Quantity" error={fieldErrors.qty_in_stock}>
               <Input
                 id="part-qty"
@@ -207,8 +200,8 @@ function Field({
   children: ReactNode
 }>) {
   return (
-    <div className="space-y-3">
-      <label htmlFor={id} className="text-sm font-medium text-foreground/90">
+    <div className="flex flex-col gap-2.5">
+      <label htmlFor={id} className="block text-sm font-medium text-foreground/90">
         {label}
       </label>
       {children}

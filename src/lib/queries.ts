@@ -2,6 +2,7 @@ import { supabase } from "./supabase"
 import { TABLE } from "./table-names"
 import type {
   InventoryInsert,
+  OutOfStockItemRow,
   InventoryRow,
   InventoryUpdate,
   RepairInsert,
@@ -177,13 +178,28 @@ export async function fetchLowStockCount(threshold = 2): Promise<number> {
 }
 
 export async function fetchAllInventory() {
-  const { data, error } = await from(TABLE.inventory).select("*").order("name", { ascending: true })
+  const { data, error } = await from(TABLE.inventory)
+    .select("*")
+    .gt("qty_in_stock", 0)
+    .order("name", { ascending: true })
 
   if (error) {
     if (isMissingTable(error)) return []
     throw error
   }
   return data ?? []
+}
+
+export async function fetchOutOfStockItems(): Promise<OutOfStockItemRow[]> {
+  const { data, error } = await from(TABLE.out_of_stock_items)
+    .select("id:inventory_id, name, category, qty_in_stock, price_per_unit, created_at:went_out_at, updated_at, went_out_at")
+    .order("went_out_at", { ascending: false })
+
+  if (error) {
+    if (isMissingTable(error)) return []
+    throw error
+  }
+  return (data ?? []) as unknown as OutOfStockItemRow[]
 }
 
 export async function fetchInventoryById(id: number): Promise<InventoryRow> {

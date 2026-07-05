@@ -7,11 +7,11 @@ export type Category =
   | 'other'
 
 export const CATEGORY_OPTIONS: { value: Category; label: string }[] = [
-  { value: 'jack', label: 'J Jacks' },
-  { value: 'mic', label: 'M Mics' },
-  { value: 'speaker', label: 'SP Speakers' },
-  { value: 'panel', label: 'P Panels' },
-  { value: 'strip', label: 'ST Strips' },
+  { value: 'jack', label: 'Jacks' },
+  { value: 'mic', label: 'Mics' },
+  { value: 'speaker', label: 'Speakers' },
+  { value: 'panel', label: 'Panels' },
+  { value: 'strip', label: 'Strips' },
   { value: 'other', label: 'Other' },
 ]
 
@@ -57,6 +57,10 @@ export interface RepairRow {
   updated_at: string
 }
 
+export interface OutOfStockItemRow extends InventoryRow {
+  went_out_at: string
+}
+
 export type RepairInsert = {
   job_type: JobType
   fee?: number
@@ -89,6 +93,11 @@ export interface Database {
         Row: InventoryRow
         Insert: InventoryInsert
         Update: InventoryUpdate
+      }
+      out_of_stock_items: {
+        Row: OutOfStockItemRow
+        Insert: never
+        Update: never
       }
       repairs: {
         Row: RepairRow
