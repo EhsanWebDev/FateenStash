@@ -34,6 +34,9 @@ const emptyMetrics: RepairSummary = {
   repairJobs: 0,
   laborJobs: 0,
   totalFees: 0,
+  repairRevenue: 0,
+  laborRevenue: 0,
+  netProfit: 0,
   averageFee: 0,
 }
 

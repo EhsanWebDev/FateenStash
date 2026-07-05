@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { ArrowLeft, BadgeDollarSign, Loader2, Package, Plus, ReceiptText, Trash2 } from "lucide-react"
+import { ArrowLeft, BadgeDollarSign, Loader2, Package, Pencil, Plus, ReceiptText, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,6 +44,8 @@ function formatDate(iso?: string | null) {
     month: "short",
     day: "numeric",
     year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   }).format(new Date(iso))
 }
 
@@ -57,6 +60,7 @@ export function RepairDetailPage() {
   const [items, setItems] = useState<RepairItemWithInventory[]>([])
   const [pendingItems, setPendingItems] = useState<PendingItem[]>([])
   const [attachOpen, setAttachOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<PendingItem | null>(null)
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -111,6 +115,7 @@ export function RepairDetailPage() {
     | {
         kind: "saved"
         id: number
+        inventoryId: number
         name: string | null
         qty: number
         unitCost: number
@@ -118,6 +123,7 @@ export function RepairDetailPage() {
     | {
         kind: "pending"
         index: number
+        inventoryId: number
         name: string
         qty: number
         unitCost: number
@@ -126,6 +132,7 @@ export function RepairDetailPage() {
     ...items.map((item) => ({
       kind: "saved" as const,
       id: item.id,
+      inventoryId: item.inventory_id,
       name: item.inventory_name,
       qty: item.qty,
       unitCost: item.unit_cost,
@@ -133,6 +140,7 @@ export function RepairDetailPage() {
     ...pendingItems.map((item, index) => ({
       kind: "pending" as const,
       index,
+      inventoryId: item.inventoryId,
       name: item.inventoryName,
       qty: item.qty,
       unitCost: item.unitCost,
@@ -146,16 +154,29 @@ export function RepairDetailPage() {
   const grossProfit = Number(form.gross_profit) || 0
   const profit = grossProfit - itemPrice
   const stats = [
-    { label: "Items Cost", value: itemPrice, icon: Package },
     { label: "Price Charged", value: grossProfit, icon: ReceiptText },
+    { label: "Items Cost", value: itemPrice, icon: Package },
     { label: "Earning", value: profit, icon: BadgeDollarSign },
   ] as const
   const itemDetails = allDisplayItems.length
-    ? allDisplayItems.map((item) => `${item.name ?? "Unknown"} x${item.qty}`).join(", ")
+    ? allDisplayItems.map((item) => item.qty > 1 ? `${item.name ?? "Unknown"} x${item.qty}` : item.name ?? "Unknown").join(", ")
     : repair?.item_details ?? null
+  const hasChanges =
+    isNew ||
+    !repair ||
+    form.job_type !== repair.job_type ||
+    grossProfit !== Number(repair.gross_profit) ||
+    itemPrice !== Number(repair.item_price)
 
   async function handleSave() {
     const nextGrossProfit = Number(form.gross_profit)
+
+    if (!isNew && !hasChanges) return
+
+    if (form.job_type === "repair" && allDisplayItems.length === 0) {
+      toast.error("Attach an item before creating a repair job.")
+      return
+    }
 
     if (!Number.isInteger(nextGrossProfit) || nextGrossProfit <= 0) {
       setFieldErrors({ gross_profit: "Price must be a whole number greater than 0" })
@@ -166,7 +187,6 @@ export function RepairDetailPage() {
       setError("Labor jobs cannot have attached items.")
       return
     }
-
     try {
       setSaving(true)
       setError(null)
@@ -232,11 +252,6 @@ export function RepairDetailPage() {
 
   const isBusy = saving || deleting
   const details = [
-    ["Type", jobTitle(form.job_type)],
-    ["Price Charged", formatPKR(grossProfit)],
-    ["Items Cost", form.job_type === "labor" ? "-" : formatPKR(itemPrice)],
-    ["Earning", formatPKR(profit)],
-    ["Items", form.job_type === "labor" ? "-" : itemDetails || "-"],
     ["Created At", formatDate(repair?.created_at)],
     ["Updated At", formatDate(repair?.updated_at)],
   ] as const
@@ -296,28 +311,30 @@ export function RepairDetailPage() {
               ))}
             </div>
 
-            <div className="flex flex-col gap-3">
-              <label htmlFor="repair-gross-profit" className="text-sm font-medium">
-                Price including repair fee
-              </label>
-              <Input
-                id="repair-gross-profit"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                step={1}
-                value={form.gross_profit}
-                disabled={isBusy}
-                className={cn(fieldErrors.gross_profit && "border-red-500 focus-visible:ring-red-500")}
-                onChange={(event) => {
-                  setForm((prev) => ({ ...prev, gross_profit: event.target.value }))
-                  clearFieldError("gross_profit")
-                }}
-              />
-              {fieldErrors.gross_profit && (
-                <p className="text-xs text-red-600 dark:text-red-400">{fieldErrors.gross_profit}</p>
-              )}
-            </div>
+            {form.job_type === "labor" && (
+              <div className="flex flex-col gap-3">
+                <label htmlFor="repair-gross-profit" className="text-sm font-medium">
+                  Price Charged
+                </label>
+                <Input
+                  id="repair-gross-profit"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  step={1}
+                  value={form.gross_profit}
+                  disabled={isBusy}
+                  className={cn(fieldErrors.gross_profit && "border-red-500 focus-visible:ring-red-500")}
+                  onChange={(event) => {
+                    setForm((prev) => ({ ...prev, gross_profit: event.target.value }))
+                    clearFieldError("gross_profit")
+                  }}
+                />
+                {fieldErrors.gross_profit && (
+                  <p className="text-xs text-red-600 dark:text-red-400">{fieldErrors.gross_profit}</p>
+                )}
+              </div>
+            )}
 
             {form.job_type === "repair" && (
               <>
@@ -331,7 +348,16 @@ export function RepairDetailPage() {
                         </p>
                       )}
                     </div>
-                    <Button type="button" size="sm" variant="outline" onClick={() => setAttachOpen(true)}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={allDisplayItems.length > 0}
+                      onClick={() => {
+                        setEditingItem(null)
+                        setAttachOpen(true)
+                      }}
+                    >
                       <Plus className="size-4" />
                       Add Item
                     </Button>
@@ -361,6 +387,24 @@ export function RepairDetailPage() {
                             <span className="text-sm font-semibold tabular-nums">
                               {formatPKR(item.qty * item.unitCost)}
                             </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-7"
+                              onClick={() => {
+                                setEditingItem({
+                                  inventoryId: item.inventoryId,
+                                  inventoryName: item.name ?? "Unknown item",
+                                  qty: item.qty,
+                                  unitCost: item.unitCost,
+                                  customerPrice: grossProfit,
+                                })
+                                setAttachOpen(true)
+                              }}
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
                             <Button
                               type="button"
                               variant="ghost"
@@ -458,7 +502,7 @@ export function RepairDetailPage() {
                 </AlertDialog>
               )}
 
-              <Button type="submit" className="w-full sm:w-auto" disabled={isBusy}>
+              <Button type="submit" className="w-full sm:w-auto" disabled={isBusy || (!isNew && !hasChanges)}>
                 {saving ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : null}
                 {isNew ? "Create Job" : "Update"}
               </Button>
@@ -469,7 +513,11 @@ export function RepairDetailPage() {
             <AttachItemDialog
               repairId={repairId}
               open={attachOpen}
-              onOpenChange={setAttachOpen}
+              onOpenChange={(open) => {
+                setAttachOpen(open)
+                if (!open) setEditingItem(null)
+              }}
+              initialItem={editingItem}
               defaultPrice={form.gross_profit}
               onSuccess={repairId === null ? () => undefined : loadRepair}
               onAttachLocal={isNew

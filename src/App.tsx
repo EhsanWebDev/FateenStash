@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { Toaster } from "sonner"
 import { AppShell } from "@/components/layout/AppShell"
 import { HomePage } from "@/pages/HomePage"
 import { StockPage } from "@/pages/StockPage"
@@ -20,6 +21,15 @@ export default function App() {
           <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
+      <Toaster
+        closeButton
+        position="top-right"
+        toastOptions={{
+          classNames: {
+            toast: "app-toast",
+          },
+        }}
+      />
     </BrowserRouter>
   )
 }

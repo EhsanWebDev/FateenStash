@@ -77,8 +77,8 @@ function normalizeRepair(repair: Partial<RepairRow>): RepairListItem {
   const itemUnitPrice = Number(repair.inventory_item_price ?? 0)
   const itemPrice = Number(repair.item_price ?? itemQty * itemUnitPrice)
   const itemDetails = repair.inventory_item_name
-    ? `${repair.inventory_item_name} x${itemQty || 1}`
-    : repair.item_details ?? null
+    ? itemQty > 1 ? `${repair.inventory_item_name} x${itemQty}` : repair.inventory_item_name
+    : repair.item_details?.replace(/\s+x1$/, "") ?? null
 
   return {
     id: Number(repair.id),
@@ -364,6 +364,57 @@ export async function attachItemToRepair(params: {
   await updateInventoryItem(params.inventoryId, {
     qty_in_stock: item.qty_in_stock - params.qty,
   })
+  await updateRepair(params.repairId, {
+    ...(params.customerPrice !== undefined ? { fee: params.customerPrice } : {}),
+    inventory_item_id: params.inventoryId,
+    inventory_item_qty: params.qty,
+    inventory_item_name: item.name,
+    inventory_item_price: Number(item.price_per_unit),
+  })
+}
+
+export async function updateAttachedItemOnRepair(params: {
+  repairId: number
+  inventoryId: number
+  qty: number
+  customerPrice?: number
+}): Promise<void> {
+  const repair = await fetchRepairById(params.repairId)
+  if (!repair.inventory_item_id) {
+    await attachItemToRepair(params)
+    return
+  }
+
+  if (!Number.isInteger(params.qty) || params.qty <= 0) {
+    throw new Error("Quantity must be a whole number greater than 0")
+  }
+  if (params.customerPrice !== undefined && (!Number.isInteger(params.customerPrice) || params.customerPrice <= 0)) {
+    throw new Error("Customer price must be a whole number greater than 0")
+  }
+
+  const oldInventoryId = repair.inventory_item_id
+  const oldQty = Number(repair.inventory_item_qty ?? 1)
+  const item = await fetchInventoryById(params.inventoryId)
+  const availableQty = item.qty_in_stock + (params.inventoryId === oldInventoryId ? oldQty : 0)
+
+  if (params.qty > availableQty) {
+    throw new Error(`Only ${availableQty} item(s) in stock`)
+  }
+
+  if (params.inventoryId === oldInventoryId) {
+    await updateInventoryItem(params.inventoryId, {
+      qty_in_stock: item.qty_in_stock + oldQty - params.qty,
+    })
+  } else {
+    const oldInventory = await fetchInventoryById(oldInventoryId)
+    await updateInventoryItem(oldInventoryId, {
+      qty_in_stock: oldInventory.qty_in_stock + oldQty,
+    })
+    await updateInventoryItem(params.inventoryId, {
+      qty_in_stock: item.qty_in_stock - params.qty,
+    })
+  }
+
   await updateRepair(params.repairId, {
     ...(params.customerPrice !== undefined ? { fee: params.customerPrice } : {}),
     inventory_item_id: params.inventoryId,

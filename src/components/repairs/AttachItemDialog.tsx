@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, Package, Search } from "lucide-react"
+import { Loader2, Package, Search, TrendingDown, TrendingUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { attachItemToRepair, fetchAllInventory } from "@/lib/queries"
+import { attachItemToRepair, fetchAllInventory, updateAttachedItemOnRepair } from "@/lib/queries"
 import { cn, formatPKR } from "@/lib/utils"
 import { CATEGORY_OPTIONS, type Category, type InventoryRow } from "@/types/database.types"
 
@@ -29,6 +29,7 @@ interface AttachItemDialogProps {
   onOpenChange: (open: boolean) => void
   onSuccess: () => void | Promise<void>
   onAttachLocal?: (item: PendingItem) => void
+  initialItem?: PendingItem | null
   defaultPrice?: string
 }
 
@@ -44,6 +45,7 @@ export function AttachItemDialog({
   onOpenChange,
   onSuccess,
   onAttachLocal,
+  initialItem = null,
   defaultPrice = "",
 }: Readonly<AttachItemDialogProps>) {
   const [inventory, setInventory] = useState<InventoryRow[]>([])
@@ -63,21 +65,34 @@ export function AttachItemDialog({
     setError(null)
     try {
       const data = await fetchAllInventory()
-      setInventory(data as InventoryRow[])
+      const rows = data as InventoryRow[]
+      setInventory(rows)
+      if (initialItem) {
+        const item = rows.find((row) => row.id === initialItem.inventoryId)
+        if (item) {
+          setSelected({
+            ...item,
+            qty_in_stock: item.qty_in_stock + initialItem.qty,
+          })
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load inventory")
     } finally {
       setLoadingInventory(false)
     }
-  }, [])
+  }, [initialItem])
 
   useEffect(() => {
     if (!open) return
+    setQty("1")
+    setPrice(initialItem ? String(initialItem.customerPrice) : null)
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadInventory()
-  }, [open, loadInventory])
+  }, [initialItem, open, loadInventory])
 
   const displayPrice = price ?? defaultPrice
+  const liveProfit = selected ? Number(displayPrice || 0) - Number(selected.price_per_unit) : 0
 
   const filteredInventory = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -111,11 +126,7 @@ export function AttachItemDialog({
       return
     }
 
-    const qtyNumber = Number(qty)
-    if (!Number.isInteger(qtyNumber) || qtyNumber <= 0) {
-      setQtyError("Quantity must be a whole number greater than 0")
-      return
-    }
+    const qtyNumber = 1
     if (qtyNumber > selected.qty_in_stock) {
       setQtyError(`Only ${selected.qty_in_stock} in stock`)
       return
@@ -147,7 +158,8 @@ export function AttachItemDialog({
       setError(null)
       setQtyError(null)
       setPriceError(null)
-      await attachItemToRepair({
+      const saveItem = initialItem ? updateAttachedItemOnRepair : attachItemToRepair
+      await saveItem({
         repairId,
         inventoryId: selected.id,
         qty: qtyNumber,
@@ -156,19 +168,19 @@ export function AttachItemDialog({
       await onSuccess()
       handleClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to attach item")
+      setError(err instanceof Error ? err.message : initialItem ? "Failed to update item" : "Failed to attach item")
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) handleClose() }}>
+    <Dialog open={open} disablePointerDismissal onOpenChange={(next) => { if (!next) handleClose() }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Attach Item</DialogTitle>
+          <DialogTitle>{initialItem ? "Edit Item" : "Attach Item"}</DialogTitle>
           <DialogDescription>
-            Pick an inventory item and quantity to attach to this repair job.
+            Pick an inventory item and quantity for this repair job.
           </DialogDescription>
         </DialogHeader>
 
@@ -261,47 +273,53 @@ export function AttachItemDialog({
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label htmlFor="attach-qty" className="text-sm font-medium">
-                Quantity
-              </label>
-              <Input
-                id="attach-qty"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={selected.qty_in_stock}
-                step={1}
-                value={qty}
-                disabled={submitting}
-                className={cn(qtyError && "border-red-500 focus-visible:ring-red-500")}
-                onChange={(event) => {
-                  setQty(event.target.value)
-                  setQtyError(null)
-                }}
-              />
-              {qtyError && <p className="text-xs text-red-600 dark:text-red-400">{qtyError}</p>}
+            <div className="grid grid-cols-[5.5rem_1fr] gap-3">
+              <div className="flex flex-col gap-2.5">
+                <label htmlFor="attach-qty" className="text-sm font-medium">
+                  Quantity
+                </label>
+                <Input
+                  id="attach-qty"
+                  type="number"
+                  value={qty}
+                  disabled
+                  className={cn(qtyError && "border-red-500 focus-visible:ring-red-500")}
+                />
+                {qtyError && <p className="text-xs text-red-600 dark:text-red-400">{qtyError}</p>}
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <label htmlFor="attach-price" className="text-sm font-medium">
+                  Price Charged
+                </label>
+                <Input
+                  id="attach-price"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  step={1}
+                  value={displayPrice}
+                  disabled={submitting}
+                  className={cn(priceError && "border-red-500 focus-visible:ring-red-500")}
+                  onChange={(event) => {
+                    setPrice(event.target.value)
+                    setPriceError(null)
+                  }}
+                />
+                {priceError && <p className="text-xs text-red-600 dark:text-red-400">{priceError}</p>}
+              </div>
             </div>
 
-            <div className="space-y-3">
-              <label htmlFor="attach-price" className="text-sm font-medium">
-                Price including repair fee
-              </label>
-              <Input
-                id="attach-price"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                step={1}
-                value={displayPrice}
-                disabled={submitting}
-                className={cn(priceError && "border-red-500 focus-visible:ring-red-500")}
-                onChange={(event) => {
-                  setPrice(event.target.value)
-                  setPriceError(null)
-                }}
-              />
-              {priceError && <p className="text-xs text-red-600 dark:text-red-400">{priceError}</p>}
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium",
+                liveProfit >= 0
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
+              )}
+            >
+              {liveProfit >= 0 ? <TrendingUp className="size-4" /> : <TrendingDown className="size-4" />}
+              <span>{liveProfit >= 0 ? "Profit" : "Loss"} {formatPKR(Math.abs(liveProfit))}</span>
             </div>
           </div>
         )}
@@ -313,7 +331,7 @@ export function AttachItemDialog({
           {selected && (
             <Button type="button" onClick={handleConfirm} disabled={submitting}>
               {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-              {submitting ? "Adding..." : "Add Item"}
+              {submitting ? (initialItem ? "Updating..." : "Adding...") : (initialItem ? "Update Item" : "Add Item")}
             </Button>
           )}
         </DialogFooter>

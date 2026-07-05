@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { CircleDollarSign, Plus, ReceiptText, Search, Wrench, Workflow } from "lucide-react"
+import { CircleDollarSign, Plus, Search, TrendingUp, Wrench, Workflow } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -31,33 +31,35 @@ interface RepairMetricTileProps {
 
 function RepairMetricTile({ label, value, hint, icon: Icon }: Readonly<RepairMetricTileProps>) {
   return (
-    <div className="rounded-[1.6rem] border border-border/70 bg-card/95 p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.5)]">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Icon className="size-4" />
+    <div className="rounded-xl border border-primary/15 bg-card/55 p-4 shadow-[0_10px_24px_-22px_hsl(var(--primary)/0.35)] ring-1 ring-foreground/5 backdrop-blur-xl">
+      <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground sm:text-xs">
+        <span className="grid size-7 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+          <Icon className="size-3.5" />
+        </span>
         <span>{label}</span>
       </div>
-      <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+      <p className="mt-3 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
         {value}
       </p>
-      <p className="mt-2 text-sm text-muted-foreground">{hint}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground sm:text-xs">{hint}</p>
     </div>
   )
 }
 
 function MetricsSkeleton() {
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
-          className="rounded-[1.6rem] border border-border/70 bg-card/95 p-5 shadow-[0_16px_40px_-30px_rgba(15,23,42,0.5)]"
+          className="rounded-xl border border-primary/15 bg-card/55 p-4 shadow-[0_10px_24px_-22px_hsl(var(--primary)/0.35)] ring-1 ring-foreground/5 backdrop-blur-xl"
         >
           <div className="flex items-center gap-2">
-            <Skeleton className="h-4 w-4 rounded-full" />
-            <Skeleton className="h-4 w-24" />
+            <Skeleton className="size-7 rounded-lg" />
+            <Skeleton className="h-3 w-24" />
           </div>
-          <Skeleton className="mt-4 h-10 w-32" />
-          <Skeleton className="mt-3 h-4 w-40" />
+          <Skeleton className="mt-3 h-8 w-28" />
+          <Skeleton className="mt-2 h-3 w-36" />
         </div>
       ))}
     </div>
@@ -71,7 +73,7 @@ function LoadingSkeleton() {
         <table className="min-w-full text-xs sm:text-sm">
           <thead>
             <tr className="border-b bg-muted/70">
-              {["Job Type", "Items", "Gross Profit", "Item Price", "Profit"].map((label) => (
+              {["Job / Item", "Gross Profit", "Item Price", "Profit"].map((label) => (
                 <th key={label} className="px-1.5 py-2 sm:px-3 sm:py-3">
                   <Skeleton className="h-4 w-16" />
                 </th>
@@ -83,9 +85,6 @@ function LoadingSkeleton() {
               <tr key={rowNumber} className="border-b last:border-b-0">
                 <td className="px-1.5 py-2 sm:px-3 sm:py-3">
                   <Skeleton className="h-8 w-24 sm:w-32" />
-                </td>
-                <td className="px-1.5 py-2 sm:px-3 sm:py-3">
-                  <Skeleton className="h-4 w-28" />
                 </td>
                 <td className="px-1.5 py-2 sm:px-3 sm:py-3">
                   <Skeleton className="ml-auto h-4 w-20" />
@@ -129,12 +128,12 @@ export function RepairsPage() {
     <div className="space-y-4 text-xs sm:text-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Repair Jobs</h2>
-          <p className="text-sm text-muted-foreground">Every repair and labor job in one place.</p>
+          <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Repair Jobs</h2>
+          <p className="text-xs text-muted-foreground sm:text-sm">Every repair and labor job in one place.</p>
         </div>
         <div className="flex items-center gap-3">
           <div>
-            <p className="text-xs text-muted-foreground">{monthLabel}</p>
+            <p className="text-[11px] text-muted-foreground sm:text-xs">{monthLabel}</p>
           </div>
           <Button size="sm" onClick={() => navigate("/repairs/new")}>
             <Plus className="size-4" />
@@ -146,30 +145,30 @@ export function RepairsPage() {
       {loading ? (
         <MetricsSkeleton />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <RepairMetricTile
-            label="Gross Profit"
+            label="Total Revenue"
             value={formatPKR(currentMonthSummary.totalFees)}
             hint={`${currentMonthSummary.totalJobs} jobs this month`}
             icon={CircleDollarSign}
           />
           <RepairMetricTile
-            label="Repair Jobs"
-            value={String(currentMonthSummary.repairJobs)}
-            hint="Device repair work logged this month"
+            label="Gross Repair Jobs Revenue"
+            value={formatPKR(currentMonthSummary.repairRevenue)}
+            hint={`${currentMonthSummary.repairJobs} repair jobs`}
             icon={Wrench}
           />
           <RepairMetricTile
-            label="Labor Jobs"
-            value={String(currentMonthSummary.laborJobs)}
-            hint="Service-only work logged this month"
+            label="Labor Jobs Revenue"
+            value={formatPKR(currentMonthSummary.laborRevenue)}
+            hint={`${currentMonthSummary.laborJobs} labor jobs`}
             icon={Workflow}
           />
           <RepairMetricTile
-            label="Average Ticket"
-            value={formatPKR(currentMonthSummary.averageFee)}
-            hint="Average fee per recorded job"
-            icon={ReceiptText}
+            label="Net Profit"
+            value={formatPKR(currentMonthSummary.netProfit)}
+            hint="Repair + labor profit after item cost"
+            icon={TrendingUp}
           />
         </div>
       )}
