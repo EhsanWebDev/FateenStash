@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useState } from "react"
 import {
   fetchAllRepairs,
-  fetchStockValue,
+  fetchAllInventory,
   fetchLowStockItems,
   fetchLowStockCount,
-  type RepairListItem,
 } from "@/lib/queries"
 import {
   filterRepairsToMonth,
   summarizeRepairs,
   type RepairSummary,
 } from "@/lib/repair-metrics"
+import type { RepairListItem } from "@/lib/queries"
+import type { InventoryRow } from "@/types/database.types"
 
 interface LowStockItem {
   id: number
@@ -21,7 +22,9 @@ interface LowStockItem {
 interface DashboardData {
   metrics: RepairSummary
   stockValue: number
-  recentRepairs: RepairListItem[]
+  inventory: InventoryRow[]
+  repairs: RepairListItem[]
+  monthRepairs: RepairListItem[]
   lowStock: LowStockItem[]
   lowStockTotal: number
   loading: boolean
@@ -43,7 +46,9 @@ const emptyMetrics: RepairSummary = {
 export function useDashboardData(): DashboardData {
   const [metrics, setMetrics] = useState<RepairSummary>(emptyMetrics)
   const [stockValue, setStockValue] = useState(0)
-  const [recentRepairs, setRecentRepairs] = useState<RepairListItem[]>([])
+  const [inventory, setInventory] = useState<InventoryRow[]>([])
+  const [repairs, setRepairs] = useState<RepairListItem[]>([])
+  const [monthRepairs, setMonthRepairs] = useState<RepairListItem[]>([])
   const [lowStock, setLowStock] = useState<LowStockItem[]>([])
   const [lowStockTotal, setLowStockTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -53,16 +58,24 @@ export function useDashboardData(): DashboardData {
     setLoading(true)
     setError(null)
     try {
-      const [repairs, stock, low, lowCount] = await Promise.all([
+      const [repairs, inventory, low, lowCount] = await Promise.all([
         fetchAllRepairs(),
-        fetchStockValue(),
+        fetchAllInventory(),
         fetchLowStockItems(2, 5),
         fetchLowStockCount(2),
       ])
 
-      setMetrics(summarizeRepairs(filterRepairsToMonth(repairs)))
-      setStockValue(stock)
-      setRecentRepairs(repairs.slice(0, 5))
+      const currentMonthRepairs = filterRepairsToMonth(repairs)
+      setMetrics(summarizeRepairs(currentMonthRepairs))
+      setRepairs(repairs)
+      setMonthRepairs(currentMonthRepairs)
+      setInventory(inventory as InventoryRow[])
+      setStockValue(
+        (inventory as InventoryRow[]).reduce(
+          (sum, item) => sum + Number(item.qty_in_stock) * Number(item.price_per_unit),
+          0,
+        ),
+      )
       setLowStock(low as LowStockItem[])
       setLowStockTotal(lowCount)
     } catch (err) {
@@ -80,7 +93,9 @@ export function useDashboardData(): DashboardData {
   return {
     metrics,
     stockValue,
-    recentRepairs,
+    inventory,
+    repairs,
+    monthRepairs,
     lowStock,
     lowStockTotal,
     loading,
