@@ -15,9 +15,9 @@ export function SideNav() {
     <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r bg-background/85 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/70 lg:w-60 md:w-16">
       <div className="flex h-14 items-center px-4 lg:px-5">
         <span className="text-lg font-bold text-primary hidden lg:block">
-          Shop FF
+          KK Repairs
         </span>
-        <span className="text-lg font-bold text-primary lg:hidden">SF</span>
+        <span className="text-lg font-bold text-primary lg:hidden">KK</span>
       </div>
 
       <Separator />

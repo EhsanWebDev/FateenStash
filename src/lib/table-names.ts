@@ -1,4 +1,7 @@
-const suffix = (import.meta.env.VITE_TABLE_SUFFIX as string) ?? ''
+export const TABLE_SUFFIX_STORAGE_KEY = "tableSuffix"
+
+const envSuffix = (import.meta.env.VITE_TABLE_SUFFIX as string) ?? ""
+const suffix = localStorage.getItem(TABLE_SUFFIX_STORAGE_KEY) ?? envSuffix
 
 export const TABLE = {
   inventory: `inventory${suffix}`,

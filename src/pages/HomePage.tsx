@@ -14,65 +14,62 @@ import { CATEGORY_OPTIONS, type InventoryRow } from "@/types/database.types"
 import type { RepairListItem } from "@/lib/queries"
 
 const monthLabel = formatMonthLabel()
-const monthFormatter = new Intl.DateTimeFormat("en-PK", { month: "short" })
+const pieColors = ["#f6c343", "#38bdf8", "#34d399", "#f97316", "#a78bfa", "#f43f5e"]
 
-function buildMonthlyFees(repairs: RepairListItem[]) {
-  const now = new Date()
-  const months = Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1)
-    return {
-      key: `${date.getFullYear()}-${date.getMonth()}`,
-      label: monthFormatter.format(date),
-      revenue: 0,
-      jobs: 0,
-    }
-  })
+function buildSoldCategories(repairs: RepairListItem[], inventory: InventoryRow[]) {
+  const categoryById = new Map(inventory.map((item) => [item.id, item.category]))
+  const sold = new Map(CATEGORY_OPTIONS.map((category) => [category.value, 0]))
 
   for (const repair of repairs) {
-    const date = new Date(repair.created_at)
-    const month = months.find((item) => item.key === `${date.getFullYear()}-${date.getMonth()}`)
-    if (!month) continue
-    month.revenue += repair.fee
-    month.jobs += 1
+    if (!repair.inventory_item_id) continue
+    const category = categoryById.get(repair.inventory_item_id) ?? "other"
+    sold.set(category, (sold.get(category) ?? 0) + Number(repair.inventory_item_qty ?? 1))
   }
 
-  return months
+  return CATEGORY_OPTIONS.map((category) => ({
+    name: category.label,
+    qty: sold.get(category.value) ?? 0,
+  }))
 }
 
-function MonthlyFeesChart({ repairs }: { repairs: RepairListItem[] }) {
-  const months = buildMonthlyFees(repairs)
-  const maxRevenue = Math.max(...months.map((month) => month.revenue), 1)
-  const current = months[months.length - 1]
-  const previous = months[months.length - 2]
-  const change = previous.revenue === 0 ? null : ((current.revenue - previous.revenue) / previous.revenue) * 100
+function SoldCategoriesChart({ repairs, inventory }: { repairs: RepairListItem[]; inventory: InventoryRow[] }) {
+  const categories = buildSoldCategories(repairs, inventory)
+  const soldCategories = categories.filter((category) => category.qty > 0)
+  const total = soldCategories.reduce((sum, category) => sum + category.qty, 0)
+  let offset = 0
+  const chart = total
+    ? soldCategories.map((category, index) => {
+        const start = offset
+        offset += (category.qty / total) * 100
+        return `${pieColors[index % pieColors.length]} ${start}% ${offset}%`
+      }).join(", ")
+    : "hsl(var(--muted)) 0 100%"
 
   return (
     <Card className="overflow-hidden">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-base">Monthly Fees</CardTitle>
-        <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
-          <p className="text-3xl font-bold tabular-nums">{formatPKR(current.revenue)}</p>
-          <p className="pb-1 text-xs text-muted-foreground">
-            {change === null ? "No previous month to compare" : `${change >= 0 ? "+" : ""}${change.toFixed(0)}% vs previous month`}
-          </p>
-        </div>
+        <CardTitle className="text-base">Inventory Types Sold</CardTitle>
+        <p className="text-3xl font-bold tabular-nums">{total} items</p>
       </CardHeader>
-      <CardContent>
-        <div className="flex h-56 items-end gap-3">
-          {months.map((month) => (
-            <div key={month.key} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-              <div className="flex h-36 w-full items-end rounded-lg bg-muted/40 p-1">
-                <div
-                  className="w-full rounded-md bg-primary shadow-[0_8px_22px_-12px_hsl(var(--primary))]"
-                  style={{ height: `${Math.max((month.revenue / maxRevenue) * 100, month.revenue ? 12 : 0)}%` }}
-                />
-              </div>
-              <div className="w-full text-center">
-                <p className="truncate text-[11px] font-medium tabular-nums">{formatPKR(month.revenue)}</p>
-                <p className="text-[11px] text-muted-foreground">{month.label}</p>
-              </div>
+      <CardContent className="grid gap-5 md:grid-cols-[16rem_minmax(0,1fr)] md:items-center">
+        <div className="relative mx-auto grid size-56 place-items-center rounded-full" style={{ background: `conic-gradient(${chart})` }}>
+          <div className="grid size-28 place-items-center rounded-full bg-card text-center shadow-inner">
+            <div>
+              <p className="text-2xl font-bold tabular-nums">{soldCategories.length}</p>
+              <p className="text-xs text-muted-foreground">types</p>
             </div>
-          ))}
+          </div>
+        </div>
+        <div className="min-w-0">
+          <div className="grid gap-2">
+            {categories.map((category, index) => (
+              <div key={category.name} className="grid grid-cols-[0.75rem_minmax(0,1fr)_auto] items-center gap-2 text-sm">
+                <span className="size-3 rounded-full" style={{ backgroundColor: pieColors[index % pieColors.length] }} />
+                <span className="truncate">{category.name}</span>
+                <span className="text-muted-foreground tabular-nums">{category.qty}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -113,14 +110,6 @@ function StockValueChart({ stockValue, inventory }: { stockValue: number; invent
             </div>
           </div>
         ))}
-        <div className="grid grid-cols-3 gap-x-3 gap-y-2 pt-1">
-          {categories.map((category) => (
-            <div key={category.label} className="min-w-0">
-              <p className="truncate text-[11px] font-medium">{category.label}</p>
-              <p className="truncate text-[11px] text-muted-foreground tabular-nums">{formatPKR(category.value)}</p>
-            </div>
-          ))}
-        </div>
       </CardContent>
     </Card>
   )
@@ -197,7 +186,7 @@ function JobMixChart({
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { metrics, stockValue, inventory, repairs, lowStock, lowStockTotal, loading, error } =
+  const { metrics, stockValue, inventory, monthRepairs, lowStock, lowStockTotal, loading, error } =
     useDashboardData()
 
   return (
@@ -223,7 +212,48 @@ export function HomePage() {
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)] lg:items-start lg:gap-6">
-          <MonthlyFeesChart repairs={repairs} />
+          <div className="grid gap-4 lg:gap-6">
+            <SoldCategoriesChart repairs={monthRepairs} inventory={inventory} />
+            {lowStock.length > 0 && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="size-4 text-primary" />
+                    <CardTitle className="text-base">Low Stock Alerts</CardTitle>
+                  </div>
+                  {lowStockTotal > 5 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => navigate("/stock?filter=low")}
+                    >
+                      See all ({lowStockTotal})
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {lowStock.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between rounded-lg border bg-muted/25 p-3 transition-colors hover:bg-primary/5"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Package className="size-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">{item.name}</span>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="border-primary/30 bg-primary/10 text-primary"
+                      >
+                        {item.qty_in_stock} left
+                      </Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+          </div>
           <div className="grid gap-4 lg:gap-6">
             <StockValueChart
               stockValue={stockValue}
@@ -237,46 +267,6 @@ export function HomePage() {
             />
           </div>
         </div>
-      )}
-
-      {!loading && lowStock.length > 0 && (
-        <Card className="border-yellow-200 dark:border-yellow-900/50">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="size-4 text-yellow-600 dark:text-yellow-400" />
-              <CardTitle className="text-base">Low Stock Alerts</CardTitle>
-            </div>
-            {lowStockTotal > 5 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
-                onClick={() => navigate("/stock?filter=low")}
-              >
-                See all ({lowStockTotal})
-              </Button>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {lowStock.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-lg border border-yellow-100 bg-yellow-50/60 p-3 transition-colors hover:bg-yellow-50 dark:border-yellow-900/30 dark:bg-yellow-900/10"
-              >
-                <div className="flex items-center gap-2">
-                  <Package className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{item.name}</span>
-                </div>
-                <Badge
-                  variant="outline"
-                  className="border-yellow-300 text-yellow-700 dark:border-yellow-800 dark:text-yellow-400"
-                >
-                  {item.qty_in_stock} left
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
       )}
     </div>
   )

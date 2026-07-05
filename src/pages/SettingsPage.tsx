@@ -4,8 +4,10 @@ import {
   Sun,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
+import { TABLE_SUFFIX_STORAGE_KEY } from "@/lib/table-names"
 import { cn } from "@/lib/utils"
 import { applyTheme, type Theme, type ThemeMode } from "@/lib/theme"
 
@@ -34,6 +36,11 @@ export function SettingsPage() {
   const [lowStockThreshold, setLowStockThreshold] = useState(() => {
     return Number(localStorage.getItem("lowStockThreshold") ?? "2")
   })
+  const [endpointTapCount, setEndpointTapCount] = useState(0)
+  const [endpointSuffix, setEndpointSuffix] = useState(() => {
+    return localStorage.getItem(TABLE_SUFFIX_STORAGE_KEY) ?? import.meta.env.VITE_TABLE_SUFFIX ?? ""
+  })
+  const showEndpointSwitch = endpointTapCount >= 3
 
   useEffect(() => {
     applyTheme(theme, themeMode)
@@ -49,6 +56,13 @@ export function SettingsPage() {
   useEffect(() => {
     localStorage.setItem("lowStockThreshold", String(lowStockThreshold))
   }, [lowStockThreshold])
+
+  function switchEndpoint() {
+    const nextSuffix = endpointSuffix === "_dev" ? "" : "_dev"
+    localStorage.setItem(TABLE_SUFFIX_STORAGE_KEY, nextSuffix)
+    setEndpointSuffix(nextSuffix)
+    window.location.reload()
+  }
 
   return (
     <div className="space-y-6">
@@ -161,8 +175,15 @@ export function SettingsPage() {
         <CardContent>
           <div className="space-y-1 text-sm">
             <p>
-              <span className="font-semibold">Shop FF</span>
-              <span className="ml-2 text-muted-foreground">v1.0.0</span>
+              <span className="font-semibold">KK Repairs</span>
+              <button
+                type="button"
+                onClick={() => setEndpointTapCount((count) => count + 1)}
+                className="ml-2 text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                aria-label="Version"
+              >
+                v1.0.0
+              </button>
             </p>
             <p className="text-muted-foreground">
               Mobile & gadget repair shop manager
@@ -170,6 +191,13 @@ export function SettingsPage() {
             <p className="text-xs text-muted-foreground">
               Data: Supabase · No authentication required
             </p>
+            {showEndpointSwitch && (
+              <div className="pt-3">
+                <Button variant="outline" size="sm" onClick={switchEndpoint}>
+                  Data: {endpointSuffix === "_dev" ? "Dev" : "Prod"} (switch)
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

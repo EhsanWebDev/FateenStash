@@ -9,7 +9,7 @@ const titles: Record<string, string> = {
 
 export function TopBar() {
   const { pathname } = useLocation()
-  const title = titles[pathname] ?? "Shop FF"
+  const title = titles[pathname] ?? "KK Repairs"
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/85 px-4 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/70">
