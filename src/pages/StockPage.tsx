@@ -149,6 +149,15 @@ export function StockPage() {
     () => summarizeStock(items, lowStockThreshold),
     [items, lowStockThreshold],
   )
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<Category, number>()
+
+    for (const item of items) {
+      counts.set(item.category, (counts.get(item.category) ?? 0) + 1)
+    }
+
+    return counts
+  }, [items])
 
   const columnFilters = useMemo<ColumnFiltersState>(() => {
     const filters: ColumnFiltersState = []
@@ -249,7 +258,7 @@ export function StockPage() {
                 : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
             )}
           >
-            {cat.label}
+            {cat.label} ({cat.value === "all" ? items.length : (categoryCounts.get(cat.value) ?? 0)})
           </button>
         ))}
       </div>
